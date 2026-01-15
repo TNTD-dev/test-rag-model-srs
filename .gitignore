@@ -1,0 +1,41 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+
+# Virtual environments
+.venv
+venv/
+ENV/
+
+# Environmental variables
+.env
+.env.local
+
+# Database (ChromaDB)
+rag_db/
+rag_db_test/
+
+# Logs
+logs/
+*.log
+
+# Benchmark & Generated Data
+benchmark_results.csv
+benchmark_retrieval.json
+data/synthetic_testset.json
+
+# IDE Settings
+.vscode/
+.idea/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+data/
+docs/

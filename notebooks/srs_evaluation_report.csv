@@ -1,0 +1,1144 @@
+﻿Input,Output_SRS,Evaluation_Judge,Status
+"Hãy đóng vai một Business Analyst chuyên nghiệp, viết một bản SRS hoàn chỉnh cho hệ thống Quản lý kho thành phẩm (WMS). Ngữ cảnh: Kho của một nhà máy sản xuất hàng điện tử quy mô lớn. Tài liệu phải bao gồm: Giới thiệu dự án, Sơ đồ chức năng (Hierarchy), Luồng nghiệp vụ từ Nhập kho (từ sản xuất) -> Lưu kho (quản lý Location/Bin) -> Xuất kho (FEFO/FIFO). Yêu cầu đặc biệt: Phải tích hợp các tiêu chuẩn ISO 9001 về truy xuất nguồn gốc (Lot/Batch) và ISO 27001 về bảo mật nhật ký hệ thống (Audit Trail). Viết theo cấu trúc chuẩn IEEE 830, sử dụng Markdown.","# Tài liệu Đặc tả Yêu cầu Phần mềm (SRS)  
+**Dự án: Hệ thống Quản lý Kho Thành phẩm (WMS)**  
+**Phiên bản:** 1.0  
+**Ngày tạo:** 05/04/2025  
+**Người thực hiện:** Business Analyst & Technical Architect  
+
+---
+
+## 1. Giới thiệu
+
+### 1.1 Mục đích  
+Tài liệu này trình bày các yêu cầu chức năng và phi chức năng cho Hệ thống Quản lý Kho Thành phẩm (WMS) nhằm hỗ trợ quản lý hiệu quả quy trình nhập kho, lưu kho và xuất kho tại nhà máy sản xuất hàng điện tử quy mô lớn. Hệ thống cũng đảm bảo tuân thủ các tiêu chuẩn quốc tế như ISO 9001 (truy xuất nguồn gốc) và ISO 27001 (bảo mật nhật ký hệ thống).
+
+### 1.2 Phạm vi  
+| Yếu tố | Mô tả |
+|--------|-------|
+| **Tên hệ thống** | Hệ thống Quản lý Kho Thành phẩm (WMS) |
+| **Mô tả ngắn gọn** | Hệ thống hỗ trợ quản lý toàn bộ quy trình lưu trữ và phân phối hàng hóa thành phẩm từ khi nhập kho đến khi xuất kho, đảm bảo tuân thủ các tiêu chuẩn ISO. |
+| **Đối tượng sử dụng** | Nhân viên kho, quản lý kho, nhân viên sản xuất, quản trị hệ thống |
+| **Đối tượng bị ảnh hưởng** | Nhà máy sản xuất hàng điện tử, bộ phận kiểm soát chất lượng, bộ phận kiểm toán nội bộ |
+| **Giao diện người dùng** | Web-based dashboard, Mobile App (cho quản lý di động) |
+| **Giao diện hệ thống** | API RESTful, kết nối với ERP, MES |
+
+### 1.3 Thuật ngữ  
+| Thuật ngữ | Định nghĩa |
+|-----------|------------|
+| **WMS** | Warehouse Management System – Hệ thống quản lý kho |
+| **FEFO/FIFO** | Phương pháp quản lý hàng tồn kho: First Expired First Out / First In First Out |
+| **Lot/Batch** | Nhóm hàng hóa được sản xuất cùng một thời điểm, có thể truy xuất nguồn gốc |
+| **ISO 9001** | Tiêu chuẩn quốc tế về hệ thống quản lý chất lượng |
+| **ISO 27001** | Tiêu chuẩn quốc tế về an toàn thông tin và bảo mật |
+| **Audit Trail** | Nhật ký hoạt động hệ thống để theo dõi và xác minh hành vi người dùng |
+
+---
+
+## 2. Mô tả tổng quan
+
+### 2.1 Sơ đồ kiến trúc hệ thống (Mermaid)
+
+```mermaid
+graph TD
+    A[ERP/MES] --> B[WMS Core]
+    B --> C[Database]
+    B --> D[API Gateway]
+    D --> E[Web UI]
+    D --> F[Mobile App]
+    B --> G[Workflow Engine]
+    G --> H[Notification Engine]
+    G --> I[Automation Engine]
+    G --> J[Scheduling Engine]
+    C --> K[Audit Log Module]
+```
+
+### 2.2 Nhóm người dùng
+
+| Nhóm người dùng | Vai trò | Mức độ truy cập |
+|------------------|---------|-----------------|
+| Nhân viên kho | Nhập/xuất hàng, quản lý location/bin | Full Access |
+| Quản lý kho | Xem báo cáo, giám sát hoạt động | Read/Write |
+| Nhân viên sản xuất | Tạo lệnh nhập kho từ sản xuất | Read/Write |
+| Quản trị hệ thống | Cấu hình hệ thống, quản lý người dùng | Admin Access |
+| Bộ phận kiểm soát | Kiểm tra audit trail, truy xuất lot/batch | Read Only |
+
+---
+
+## 3. Khung Workflow Framework (Tái sử dụng)
+
+### 3.1 Các Engine trong hệ thống
+
+| Engine | Mô tả |
+|--------|-------|
+| **Approval Engine** | Quản lý quy trình phê duyệt nhập/xuất kho, kiểm duyệt dữ liệu |
+| **Notification Engine** | Gửi thông báo qua email/SMS khi có sự kiện quan trọng |
+| **Automation Engine** | Tự động hóa các bước như phân loại hàng, cập nhật location |
+| **Scheduling Engine** | Lên lịch định kỳ kiểm kê, báo cáo, phân bổ tài nguyên |
+
+### 3.2 Các Workflow Patterns
+
+| Pattern | Mô tả |
+|---------|-------|
+| **Sequential Workflow** | Quy trình nhập kho → lưu kho → xuất kho theo thứ tự |
+| **Parallel Workflow** | Nhiều nhiệm vụ có thể diễn ra đồng thời (ví dụ: kiểm tra chất lượng + phân loại hàng) |
+| **Matrix Workflow** | Quy trình phức tạp với nhiều điều kiện logic (ví dụ: xuất kho theo FEFO + kiểm duyệt) |
+
+### 3.3 Database Schema mẫu cho Framework
+
+```sql
+CREATE TABLE workflow_engine (
+    id INT PRIMARY KEY,
+    name VARCHAR(255),
+    type ENUM('sequential', 'parallel', 'matrix'),
+    status ENUM('active', 'inactive')
+);
+
+CREATE TABLE audit_log (
+    id INT PRIMARY KEY,
+    user_id INT,
+    action VARCHAR(255),
+    timestamp DATETIME,
+    details TEXT
+);
+```
+
+---
+
+## 4. Các Module chức năng
+
+### 4.1 Module: Nhập kho từ sản xuất
+
+#### Business Flow (Mermaid)
+```mermaid
+graph LR
+    A[Sản xuất] --> B[Nhập kho]
+    B --> C[Xác nhận nhập kho]
+    C --> D[Phân loại hàng hóa]
+    D --> E[Lưu vào Location/Bin]
+```
+
+#### Activity Diagram
+```mermaid
+graph TD
+    Start((Bắt đầu)) --> A[Nhập kho từ sản xuất]
+    A --> B[Xác nhận dữ liệu]
+    B --> C[Phân loại hàng hóa]
+    C --> D[Phân bổ Location/Bin]
+    D --> E[Lưu vào hệ thống]
+    E --> F[Kết thúc]
+```
+
+#### DB Schema
+```sql
+CREATE TABLE inbound_shipment (
+    id INT PRIMARY KEY,
+    product_id INT,
+    batch_number VARCHAR(50),
+    quantity INT,
+    location_id INT,
+    created_at DATETIME,
+    status ENUM('pending', 'completed', 'rejected')
+);
+```
+
+#### Business Rules
+- **XXX-BR-01**: Batch/Lot phải được gán khi nhập kho từ sản xuất.
+- **XXX-BR-02**: Chỉ nhân viên sản xuất mới có quyền tạo lệnh nhập kho.
+- **XXX-BR-03**: Hệ thống tự động ghi nhật ký khi có thay đổi dữ liệu nhập kho.
+
+---
+
+### 4.2 Module: Lưu kho (Location/Bin)
+
+#### Business Flow
+```mermaid
+graph LR
+    A[Nhập kho] --> B[Phân loại hàng hóa]
+    B --> C[Gán Location/Bin]
+    C --> D[Lưu vào hệ thống]
+```
+
+#### Activity Diagram
+```mermaid
+graph TD
+    Start((Bắt đầu)) --> A[Phân loại hàng hóa]
+    A --> B[Gán Location/Bin]
+    B --> C[Lưu vào DB]
+    C --> D[Kết thúc]
+```
+
+#### DB Schema
+```sql
+CREATE TABLE inventory_location (
+    id INT PRIMARY KEY,
+    bin_code VARCHAR(50),
+    location_type ENUM('storage', 'receiving', 'shipping'),
+    capacity INT,
+    current_stock INT
+);
+```
+
+#### Business Rules
+- **XXX-BR-04**: Mỗi lô hàng chỉ được lưu tại một location duy nhất.
+- **XXX-BR-05**: Location phải được phân loại theo loại hàng (nhiệt độ, độ ẩm…).
+- **XXX-BR-06**: Hệ thống tự động ghi nhật ký khi có thay đổi vị trí hàng hóa.
+
+---
+
+### 4.3 Module: Xuất kho (FEFO/FIFO)
+
+#### Business Flow
+```mermaid
+graph LR
+    A[Yêu cầu xuất kho] --> B[Kiểm tra tồn kho]
+    B --> C[Chọn hàng theo FEFO/FIFO]
+    C --> D[Xuất kho]
+    D --> E[Cập nhật tồn kho]
+```
+
+#### Activity Diagram
+```mermaid
+graph TD
+    Start((Bắt đầu)) --> A[Yêu cầu xuất kho]
+    A --> B[Kiểm tra tồn kho]
+    B --> C[Chọn hàng theo FEFO/FIFO]
+    C --> D[Xuất kho]
+    D --> E[Cập nhật tồn kho]
+    E --> F[Kết thúc]
+```
+
+#### DB Schema
+```sql
+CREATE TABLE outbound_shipment (
+    id INT PRIMARY KEY,
+    product_id INT,
+    batch_number VARCHAR(50),
+    quantity INT,
+    location_id INT,
+    expiry_date DATE,
+    method ENUM('FIFO', 'FEFO'),
+    created_at DATETIME
+);
+```
+
+#### Business Rules
+- **XXX-BR-07**: Hàng hóa được xuất theo nguyên tắc FEFO/FIFO.
+- **XXX-BR-08**: Ngày hết hạn phải được hiển thị rõ ràng trong quá trình xuất kho.
+- **XXX-BR-09**: Hệ thống tự động ghi nhật ký khi có xuất kho.
+
+---
+
+## 5. Yêu cầu phi chức năng
+
+### 5.1 Hiệu năng  
+- Thời gian phản hồi hệ thống < 2 giây cho các thao tác cơ bản.
+- Hỗ trợ tối đa 1000 người dùng đồng thời.
+- Tốc độ xử lý hàng loạt: tối thiểu 1000 bản ghi mỗi phút.
+
+### 5.2 Bảo mật  
+- Tuân thủ tiêu chuẩn ISO 27001.
+- Tất cả hoạt động người dùng đều được ghi lại trong Audit Trail.
+- Mã hóa dữ liệu nhạy cảm (batch number, expiry date) khi lưu trữ.
+
+### 5.3 Độ tin cậy  
+- Hệ thống có khả năng phục hồi sau sự cố (disaster recovery).
+- Backup dữ liệu tự động hàng ngày.
+- Đảm bảo tính toàn vẹn dữ liệu theo tiêu chuẩn ISO 9001.
+
+---
+
+## 6. Phụ lục
+
+### 6.1 Ghi chú về tiêu chuẩn ISO  
+- **ISO 9001**: Áp dụng cho việc truy xuất nguồn gốc hàng hóa thông qua Lot/Batch.
+- **ISO 27001**: Áp dụng cho việc xây dựng và duy trì hệ thống nhật ký hoạt động (Audit Trail).
+
+### 6.2 Ghi chú về quy trình kiểm soát chất lượng  
+- Hệ thống hỗ trợ kiểm tra và ghi nhận các bước kiểm tra chất lượng trong quá trình lưu kho và xuất kho.
+
+--- 
+
+**Kết thúc tài liệu**","Tuyệt vời! Tôi đã sẵn sàng đảm nhận vai trò ""Giám khảo AI"" để đánh giá bản SRS bạn cung cấp. Hãy bắt đầu nào.
+
+---
+
+## ĐÁNH GIÁ TÀI LIỆU SRS: Hệ thống Quản lý Kho Thành phẩm (WMS)
+
+**1. Tính đầy đủ (Completeness - Trọng số 30%)**
+
+*   **Điểm chi tiết:** 9/10
+*   **Nhận xét:**
+    *   **Giới thiệu:** Đầy đủ các mục cần thiết như Mục đích, Phạm vi, Thuật ngữ.
+    *   **Workflow:** Phần ""Khung Workflow Framework"" đã được đề cập, bao gồm các Engine và Patterns. Tuy nhiên, các module chức năng sau đó (Nhập kho, Lưu kho, Xuất kho) chưa thể hiện rõ ràng cách chúng tích hợp hoặc sử dụng các Framework này, ví dụ như sử dụng ""Approval Engine"" hay ""Notification Engine"".
+    *   **Module:** Các module chức năng chính (Nhập kho, Lưu kho, Xuất kho) được trình bày khá chi tiết với Business Flow, Activity Diagram, DB Schema và Business Rules.
+    *   **DB Schema:** Đã có các ví dụ DB Schema cho từng module và cho framework.
+    *   **Phi chức năng:** Đã có các mục Hiệu năng, Bảo mật, Độ tin cậy.
+    *   **Thiếu sót:** Một số phần có thể được chi tiết hơn, ví dụ như các chức năng báo cáo, quản lý sản phẩm, quản lý người dùng chi tiết hơn.
+
+**2. Tính nhất quán (Consistency - Trọng số 30%)**
+
+*   **Điểm chi tiết:** 8/10
+*   **Nhận xét:**
+    *   **Logic giữa các phần:** Nhìn chung, logic giữa các phần khá mạch lạc. Sơ đồ kiến trúc hệ thống cung cấp cái nhìn tổng quan tốt. Các module chức năng liên quan đến luồng nhập, lưu, xuất kho có sự liên kết logic.
+    *   **DB Schema và Quy trình:** Các DB Schema được cung cấp cho từng module dường như khớp với quy trình mô tả. Ví dụ, `inbound_shipment` có các trường liên quan đến nhập kho, `inventory_location` liên quan đến lưu kho, và `outbound_shipment` cho xuất kho.
+    *   **Thuật ngữ:** Các thuật ngữ được định nghĩa rõ ràng và nhất quán được sử dụng trong tài liệu.
+    *   **Điểm cần cải thiện:** Mặc dù có đề cập ""Workflow Framework"", tài liệu chưa cho thấy rõ ràng cách các module chức năng cụ thể sẽ ""sử dụng"" các Engine trong Framework đó. Ví dụ, làm thế nào ""Nhập kho từ sản xuất"" sử dụng ""Approval Engine"" hay ""Notification Engine""? Điều này tạo ra một khoảng trống nhỏ về tính nhất quán giữa khái niệm Framework và triển khai Module.
+
+**3. Độ chính xác nghiệp vụ (Accuracy - Trọng số 20%)**
+
+*   **Điểm chi tiết:** 9/10
+*   **Nhận xét:**
+    *   **Thuật ngữ BA/IT:** Sử dụng thuật ngữ chuyên ngành BA/IT (SRS, WMS, ERP, MES, API, FEFO/FIFO, Lot/Batch, Audit Trail, etc.) rất chính xác và phù hợp.
+    *   **Quy trình thực tế:** Các quy trình nhập kho, lưu kho, xuất kho được mô tả là rất thực tế và phổ biến trong môi trường quản lý kho. Việc tuân thủ các tiêu chuẩn ISO 9001 và ISO 27001 cũng là một điểm cộng về tính chuyên nghiệp và thực tế.
+    *   **Mô tả sản phẩm:** Mô tả về nhà máy sản xuất hàng điện tử quy mô lớn cùng các yêu cầu về ISO giúp định hình rõ ràng bối cảnh nghiệp vụ.
+    *   **Điểm cần lưu ý:** Một số tên rule kiểu ""XXX-BR-01"" nên được thay thế bằng tiền tố tên hệ thống hoặc module cụ thể hơn để tăng tính định danh.
+
+**4. Định dạng & Văn phong (Format & Tone - Trọng số 20%)**
+
+*   **Điểm chi tiết:** 8/10
+*   **Nhận xét:**
+    *   **Markdown chuẩn:** Sử dụng Markdown khá tốt với các tiêu đề, bảng biểu, code blocks.
+    *   **Mermaid:** Sử dụng Mermaid để biểu diễn sơ đồ kiến trúc và các luồng là một điểm cộng lớn, giúp trực quan hóa thông tin hiệu quả.
+    *   **Văn phong:** Văn phong chuyên nghiệp, rõ ràng, súc tích.
+    *   **""Bịa đặt"" thông tin:** Không có dấu hiệu rõ ràng của việc ""bịa đặt"" thông tin. Các thông tin được trình bày logic và có cơ sở.
+    *   **Điểm cần cải thiện:**
+        *   Trong phần ""Nhóm người dùng"", mục ""Nhân viên kho"" ghi ""Full Access"" là hơi chung chung. Mức độ truy cập nên được chi tiết hơn (ví dụ: Nhập kho:CRUD, Xem tồn kho:R, Cập nhật Location:CRUD).
+        *   Trong phần ""Module: Nhập kho từ sản xuất"", ""Business Flow"" và ""Activity Diagram"" có vẻ hơi trùng lặp hoặc có thể được gộp/làm rõ hơn sự khác biệt. ""Business Flow"" thường mô tả các bước nghiệp vụ chính, còn ""Activity Diagram"" mô tả chi tiết luồng hành động. Ở đây, chúng trông khá giống nhau.
+        *   Các DB Schema chỉ là ví dụ. Nên có một mục tổng hợp hoặc tham chiếu đến một sơ đồ ERD hoàn chỉnh hơn nếu có thể.
+
+---
+
+### TỔNG KẾT ĐIỂM TRỌNG SỐ:
+
+*   **Tính đầy đủ:** 9/10 * 0.30 = 2.7
+*   **Tính nhất quán:** 8/10 * 0.30 = 2.4
+*   **Độ chính xác nghiệp vụ:** 9/10 * 0.20 = 1.8
+*   **Định dạng & Văn phong:** 8/10 * 0.20 = 1.6
+
+**TỔNG ĐIỂM:** 2.7 + 2.4 + 1.8 + 1.6 = **8.5 / 10**
+
+---
+
+### PHÂN LOẠI: **Xuất sắc** (9-10)
+
+---
+
+### NHẬN XÉT CỤ THỂ NHỮNG ĐIỂM CẦN CẢI THIỆN:
+
+1.  **Làm rõ mối liên hệ giữa Workflow Framework và các Module:** Tài liệu đã giới thiệu một ""Khung Workflow Framework"" rất hay với các Engine. Tuy nhiên, cần bổ sung hoặc làm rõ hơn trong mô tả các Module chức năng (Nhập kho, Lưu kho, Xuất kho) về cách chúng sẽ tích hợp và sử dụng các Engine đó. Ví dụ, làm rõ quy trình ""Nhập kho từ sản xuất"" sẽ gọi đến ""Approval Engine"" để phê duyệt, hay ""Notification Engine"" để cảnh báo khi có lô hàng mới.
+2.  **Chi tiết hóa mức độ truy cập người dùng:** Đối với ""Nhóm người dùng"", thay vì dùng ""Full Access"", ""Read/Write"", ""Admin Access"", nên cụ thể hóa hơn các quyền hạn (CRUD - Create, Read, Update, Delete) cho từng nhóm đối với từng chức năng hoặc đối tượng dữ liệu nhất định (ví dụ: Nhân viên kho có quyền CRUD trên `inbound_shipment`, nhưng chỉ có quyền Read trên `product_master`).
+3.  **Đồng nhất và làm rõ các biểu đồ:** Kiểm tra lại sự khác biệt và mục đích của ""Business Flow"" và ""Activity Diagram"" trong các module. Nếu chúng quá giống nhau, có thể cân nhắc giữ lại một loại hoặc làm rõ vai trò của từng loại biểu đồ.
+4.  **Tăng tính định danh cho Business Rules:** Đổi các tiền tố ""XXX-BR-XX"" thành một cái gì đó mang tính định danh rõ ràng hơn, ví dụ: ""WMS-INB-BR-01"" cho quy tắc nhập kho, ""WMS-INV-BR-04"" cho quy tắc tồn kho, giúp việc theo dõi và quản lý quy tắc dễ dàng hơn.
+5.  **Bổ sung các Module/Chức năng khác:** Mặc dù các module cốt lõi đã được đề cập, một hệ thống WMS hoàn chỉnh thường cần thêm các module như: Quản lý sản phẩm (Product Master), Quản lý người dùng & phân quyền chi tiết, Quản lý đơn hàng (Order Management), Các loại báo cáo (Reports - Stock, Movement, Performance), v.v. Nên cân nhắc bổ sung một mục đề cập sơ lược hoặc lên danh sách các module này để tài liệu đầy đủ hơn về phạm vi của hệ thống.
+
+**Nhìn chung, đây là một bản SRS được chuẩn bị rất tốt, cho thấy sự hiểu biết sâu sắc về cả khía cạnh nghiệp vụ lẫn kỹ thuật. Các điểm cải thiện được đề xuất nhằm nâng cao hơn nữa tính chi tiết, rõ ràng và hoàn chỉnh của tài liệu.**",Success
+"Viết một tài liệu SRS cho phần mềm quản lý kho thành phẩm ngành FMCG (hàng tiêu dùng nhanh). Hãy tập trung toàn bộ vào danh sách User Stories cho 3 đối tượng: Nhân viên kho (dùng Handheld), Quản lý kho (dùng Web Dashboard) và Nhân viên QC. Mỗi User Story phải đi kèm Acceptance Criteria chi tiết theo format Gherkin. Yêu cầu mô tả kỹ các nghiệp vụ: Kiểm kê luân phiên (Cycle Counting), Đóng gói (Packing) và xử lý hàng lỗi/hàng trả về. Đảm bảo có mục xử lý lỗi (Exception handling) khi quét sai mã vạch hoặc thiếu hàng.","# Tài liệu Đặc tả Yêu cầu Phần mềm (SRS)  
+## Dự án: Hệ thống Quản lý Kho Thành Phẩm Ngành FMCG  
+
+---
+
+### 1. Giới thiệu
+
+#### 1.1 Mục đích  
+Tài liệu này mô tả chi tiết các yêu cầu chức năng và phi chức năng của hệ thống quản lý kho thành phẩm dành cho ngành FMCG. Hệ thống hỗ trợ các hoạt động như kiểm kê luân phiên (Cycle Counting), đóng gói (Packing), xử lý hàng lỗi/hàng trả về, đồng thời đảm bảo tính chính xác và hiệu quả trong quản lý tồn kho.
+
+#### 1.2 Phạm vi  
+| **Phạm vi** | **Chi tiết** |
+|-------------|--------------|
+| **Tên dự án** | Hệ thống Quản lý Kho Thành Phẩm FMCG |
+| **Đối tượng người dùng chính** | Nhân viên kho (Handheld), Quản lý kho (Web Dashboard), Nhân viên QC |
+| **Ngôn ngữ lập trình** | Java / Spring Boot (Backend), React.js (Frontend) |
+| **Công nghệ cơ sở dữ liệu** | PostgreSQL |
+| **Thiết bị đầu cuối** | Handheld Scanner, Web Browser |
+| **Môi trường triển khai** | Cloud Infrastructure (AWS / Azure) |
+
+#### 1.3 Thuật ngữ  
+| **Thuật ngữ** | **Giải thích** |
+|---------------|----------------|
+| **FMCG** | Hàng hóa tiêu dùng nhanh (Fast Moving Consumer Goods) |
+| **Cycle Counting** | Kiểm kê luân phiên – kiểm tra định kỳ từng nhóm hàng tồn kho |
+| **Packing** | Quy trình đóng gói sản phẩm trước khi giao hàng |
+| **QC** | Quality Control – Kiểm tra chất lượng hàng hóa |
+| **Handheld Scanner** | Thiết bị quét mã vạch di động dùng tại kho |
+| **SRS** | Software Requirements Specification |
+| **User Story** | Mô tả yêu cầu từ góc nhìn người dùng |
+
+---
+
+### 2. Mô tả tổng quan
+
+#### 2.1 Sơ đồ kiến trúc hệ thống (Mermaid)
+
+```mermaid
+graph TD
+    A[Handheld Scanner] --> B[API Gateway]
+    C[Web Dashboard] --> B
+    D[QC System] --> B
+    B --> E[Core Service Layer]
+    E --> F[Database]
+    E --> G[Notification Engine]
+    E --> H[Automation Engine]
+    E --> I[Scheduling Engine]
+```
+
+#### 2.2 Nhóm người dùng
+
+| **Nhóm người dùng** | **Vai trò** | **Thiết bị sử dụng** |
+|---------------------|-------------|----------------------|
+| Nhân viên kho | Thực hiện nhập/xuất hàng, kiểm kê, quét mã vạch | Handheld Scanner |
+| Quản lý kho | Theo dõi tình trạng kho, báo cáo, phân tích dữ liệu | Web Dashboard |
+| Nhân viên QC | Kiểm tra chất lượng hàng hóa, xử lý hàng lỗi/trả về | Web Dashboard / Handheld |
+
+---
+
+### 3. Khung Workflow Framework (Tái sử dụng)
+
+#### 3.1 Định nghĩa các Engine
+
+| **Engine** | **Chức năng** |
+|------------|----------------|
+| **Approval Engine** | Xử lý phê duyệt các thao tác đặc biệt như điều chỉnh tồn kho, xử lý lỗi |
+| **Notification Engine** | Gửi thông báo qua email/SMS khi có sự kiện quan trọng |
+| **Automation Engine** | Tự động hóa quy trình như tạo phiếu xuất nhập, cập nhật tồn kho |
+| **Scheduling Engine** | Lên lịch kiểm kê luân phiên, báo cáo định kỳ |
+
+#### 3.2 Các Workflow Patterns
+
+| **Pattern** | **Mô tả** |
+|-------------|-----------|
+| **Sequential** | Các bước thực hiện theo thứ tự cố định (ví dụ: Quét → Kiểm tra → Lưu trữ) |
+| **Parallel** | Nhiều hành động diễn ra cùng lúc (ví dụ: Kiểm tra QC + Quét mã vạch) |
+| **Matrix** | Kết hợp nhiều điều kiện để chọn hành động phù hợp (ví dụ: Loại hàng + Trạng thái tồn kho) |
+
+#### 3.3 Database Schema mẫu cho Framework
+
+```sql
+-- Table: workflow_engine
+CREATE TABLE workflow_engine (
+    id UUID PRIMARY KEY,
+    name VARCHAR(255),
+    type VARCHAR(50),
+    status VARCHAR(50),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Table: workflow_step
+CREATE TABLE workflow_step (
+    id UUID PRIMARY KEY,
+    workflow_id UUID REFERENCES workflow_engine(id),
+    step_name VARCHAR(255),
+    action_type VARCHAR(50),
+    next_step_id UUID
+);
+```
+
+---
+
+### 4. Các Module chức năng
+
+#### 4.1 Module: Kiểm kê luân phiên (Cycle Counting)
+
+##### Business Flow (Mermaid)
+
+```mermaid
+graph LR
+    A[Quản lý kho tạo kế hoạch] --> B[Phân bổ nhóm hàng]
+    B --> C[Nhân viên kho quét mã vạch]
+    C --> D{Kiểm tra tồn kho}
+    D -- Có khớp --> E[Xác nhận hoàn tất]
+    D -- Không khớp --> F[Yêu cầu điều chỉnh]
+    F --> G[Quản lý phê duyệt]
+    G --> H[Cập nhật tồn kho]
+```
+
+##### Activity Diagram
+
+```mermaid
+graph TD
+    Start((Bắt đầu)) --> Plan[Quản lý lập kế hoạch]
+    Plan --> Assign[Phân công nhóm hàng]
+    Assign --> Scan[Quét mã vạch]
+    Scan --> Check{Kiểm tra tồn kho}
+    Check -- Khớp --> Confirm[Hoàn tất]
+    Check -- Không khớp --> Adjust[Điều chỉnh tồn kho]
+    Adjust --> Approve[Phê duyệt]
+    Approve --> Update[Update DB]
+    Update --> End((Kết thúc))
+```
+
+##### DB Schema
+
+```sql
+-- Table: cycle_count_plan
+CREATE TABLE cycle_count_plan (
+    id UUID PRIMARY KEY,
+    plan_name VARCHAR(255),
+    start_date DATE,
+    end_date DATE,
+    status VARCHAR(50)
+);
+
+-- Table: cycle_count_item
+CREATE TABLE cycle_count_item (
+    id UUID PRIMARY KEY,
+    plan_id UUID REFERENCES cycle_count_plan(id),
+    product_code VARCHAR(50),
+    expected_qty INT,
+    actual_qty INT,
+    status VARCHAR(50)
+);
+```
+
+##### Business Rules
+
+- **XXX-BR-01**: Nếu số lượng quét không khớp với tồn kho, hệ thống yêu cầu phê duyệt điều chỉnh.
+- **XXX-BR-02**: Mỗi kế hoạch kiểm kê chỉ được thực hiện tối đa 1 lần trong ngày.
+
+##### Acceptance Criteria (Gherkin)
+
+```gherkin
+Scenario: Nhân viên kho quét mã vạch và kiểm tra tồn kho
+Given nhân viên kho đang ở màn hình quét mã vạch
+When họ quét mã vạch sản phẩm
+Then hệ thống hiển thị số lượng tồn kho hiện tại
+And nếu số lượng không khớp thì yêu cầu điều chỉnh
+
+Scenario: Quản lý phê duyệt điều chỉnh tồn kho
+Given có một điều chỉnh tồn kho chưa được phê duyệt
+When quản lý phê duyệt điều chỉnh
+Then hệ thống cập nhật lại số lượng tồn kho
+```
+
+---
+
+#### 4.2 Module: Đóng gói (Packing)
+
+##### Business Flow (Mermaid)
+
+```mermaid
+graph LR
+    A[Quản lý tạo đơn đóng gói] --> B[Nhân viên kho quét mã đơn hàng]
+    B --> C[Kiểm tra hàng tồn kho]
+    C --> D{Hàng đủ?}
+    D -- Đủ --> E[Bắt đầu đóng gói]
+    D -- Thiếu --> F[Yêu cầu bổ sung]
+    E --> G[Ghi nhận đóng gói]
+    G --> H[Xác nhận hoàn tất]
+```
+
+##### Activity Diagram
+
+```mermaid
+graph TD
+    Start((Bắt đầu)) --> CreateOrder[Quản lý tạo đơn]
+    CreateOrder --> ScanOrder[Quét mã đơn hàng]
+    ScanOrder --> CheckStock[Kiểm tra tồn kho]
+    CheckStock -- Đủ --> Pack[Đóng gói]
+    CheckStock -- Thiếu --> AddStock[Yêu cầu bổ sung]
+    Pack --> Record[Ghi nhận đóng gói]
+    Record --> Finish[Hoàn tất]
+```
+
+##### DB Schema
+
+```sql
+-- Table: packing_order
+CREATE TABLE packing_order (
+    id UUID PRIMARY KEY,
+    order_number VARCHAR(50),
+    status VARCHAR(50),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Table: packing_item
+CREATE TABLE packing_item (
+    id UUID PRIMARY KEY,
+    order_id UUID REFERENCES packing_order(id),
+    product_code VARCHAR(50),
+    quantity INT
+);
+```
+
+##### Business Rules
+
+- **XXX-BR-03**: Đơn đóng gói chỉ được tạo khi tồn kho đủ hàng.
+- **XXX-BR-04**: Sau khi đóng gói, hệ thống tự động trừ tồn kho.
+
+##### Acceptance Criteria (Gherkin)
+
+```gherkin
+Scenario: Đóng gói đơn hàng thành công
+Given có đơn hàng cần đóng gói
+When nhân viên kho quét mã đơn hàng và kiểm tra tồn kho
+Then hệ thống cho phép bắt đầu đóng gói
+And sau khi đóng gói, tồn kho giảm tương ứng
+
+Scenario: Đơn hàng thiếu hàng
+Given đơn hàng thiếu hàng
+When nhân viên kho quét mã đơn hàng
+Then hệ thống hiển thị cảnh báo thiếu hàng
+And yêu cầu bổ sung hàng
+```
+
+---
+
+#### 4.3 Module: Xử lý hàng lỗi/Hàng trả về
+
+##### Business Flow (Mermaid)
+
+```mermaid
+graph LR
+    A[Nhân viên QC phát hiện hàng lỗi] --> B[Tạo phiếu xử lý]
+    B --> C[Quản lý phê duyệt]
+    C --> D[Xử lý hàng lỗi]
+    D --> E[Trả lại nhà cung cấp hoặc hủy]
+    E --> F[Thông báo cho liên quan]
+```
+
+##### Activity Diagram
+
+```mermaid
+graph TD
+    Start((Bắt đầu)) --> Detect[QC phát hiện lỗi]
+    Detect --> CreateReport[Khởi tạo phiếu xử lý]
+    CreateReport --> Approve[Quản lý phê duyệt]
+    Approve --> Process[Thực hiện xử lý]
+    Process --> Notify[Thông báo]
+    Notify --> End((Kết thúc))
+```
+
+##### DB Schema
+
+```sql
+-- Table: defect_report
+CREATE TABLE defect_report (
+    id UUID PRIMARY KEY,
+    product_code VARCHAR(50),
+    reason VARCHAR(255),
+    status VARCHAR(50),
+    created_by VARCHAR(100),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Table: defect_action
+CREATE TABLE defect_action (
+    id UUID PRIMARY KEY,
+    report_id UUID REFERENCES defect_report(id),
+    action_type VARCHAR(50),
+    description TEXT
+);
+```
+
+##### Business Rules
+
+- **XXX-BR-05**: Chỉ nhân viên QC mới có quyền tạo phiếu xử lý hàng lỗi.
+- **XXX-BR-06**: Tất cả hành động xử lý hàng lỗi đều phải được phê duyệt.
+
+##### Acceptance Criteria (Gherkin)
+
+```gherkin
+Scenario: Nhân viên QC tạo phiếu xử lý hàng lỗi
+Given nhân viên QC phát hiện hàng lỗi
+When họ tạo phiếu xử lý
+Then hệ thống lưu lại lý do và trạng thái phiếu
+
+Scenario: Quản lý phê duyệt xử lý hàng lỗi
+Given có phiếu xử lý hàng lỗi chưa được phê duyệt
+When quản lý phê duyệt
+Then hệ thống thực hiện hành động xử lý (trả lại, hủy...)
+```
+
+---
+
+### 5. Yêu cầu phi chức năng
+
+#### 5.1 Hiệu năng  
+- Thời gian phản hồi hệ thống dưới 2 giây cho các thao tác quét mã vạch.
+- Hỗ trợ tối đa 1000 thiết bị đồng thời hoạt động.
+
+#### 5.2 Bảo mật  
+- Xác thực người dùng bằng OAuth 2.0.
+- Mã hóa dữ liệu truyền tải bằng TLS 1.3.
+- Phân quyền truy cập theo vai trò (Role-Based Access Control).
+
+#### 5.3 Độ tin cậy  
+- Hệ thống có khả năng phục hồi tự động sau sự cố.
+- Backup dữ liệu hàng ngày và lưu trữ tại异地数据中心.
+
+--- 
+
+**Tài liệu này được xây dựng theo tiêu chuẩn SRS và có thể được sử dụng làm tài liệu tham khảo cho phát triển phần mềm và kiểm thử.**","Tuyệt vời! Tôi đã xem xét kỹ lưỡng bản SRS bạn cung cấp. Dưới đây là đánh giá chi tiết của tôi dựa trên bộ tiêu chí đã đề ra.
+
+---
+
+## Đánh giá Bản SRS - Hệ thống Quản lý Kho Thành Phẩm Ngành FMCG
+
+### Điểm chi tiết cho từng tiêu chí:
+
+**1. Tính đầy đủ (Completeness - Trọng số 30%)**
+
+*   **Giới thiệu:** Đầy đủ các mục Mục đích, Phạm vi, Thuật ngữ. Phần Phạm vi cung cấp thông tin chi tiết về công nghệ và đối tượng.
+*   **Workflow:** Sơ đồ kiến trúc hệ thống (Mermaid) có, mô tả các Engine và Workflow Patterns có, DB Schema mẫu cho Framework có. Tuy nhiên, các Workflow chi tiết cho từng module (như mô tả ở phần 4) lại sử dụng cả Business Flow (Mermaid) và Activity Diagram, điều này có thể gây ra sự dư thừa hoặc mâu thuẫn nếu không được quản lý cẩn thận.
+*   **Module:** Các module chính (Cycle Counting, Packing, Hàng lỗi/trả về) đều được mô tả khá tốt với Business Flow, Activity Diagram, DB Schema, Business Rules và Acceptance Criteria.
+*   **DB Schema:** Các DB Schema được cung cấp cho từng module, cũng như schema mẫu cho Framework. Khá đầy đủ.
+*   **Phi chức năng:** Đầy đủ các mục Hiệu năng, Bảo mật, Độ tin cậy.
+
+**Nhận xét:** Bản SRS khá đầy đủ về các mục yêu cầu. Tuy nhiên, việc lặp lại các sơ đồ quy trình (Business Flow và Activity Diagram) trong mỗi module chức năng có thể làm tăng khối lượng tài liệu và tiềm ẩn nguy cơ thiếu nhất quán. Cần làm rõ vai trò và sự khác biệt của từng loại sơ đồ.
+
+*   **Điểm:** 8/10
+
+**2. Tính nhất quán (Consistency - Trọng số 30%)**
+
+*   **Logic giữa các phần:**
+    *   **Kiến trúc & Modules:** Sơ đồ kiến trúc (2.1) chỉ ra API Gateway, Core Service Layer, Database. Các module chức năng (4.x) mô tả chi tiết các hoạt động nghiệp vụ, và DB Schema của chúng (ví dụ: `cycle_count_plan`, `packing_order`) tương thích với việc có một lớp cơ sở dữ liệu chung.
+    *   **Framework & Modules:** Các Engine được định nghĩa ở mục 3 (Approval, Notification, Automation, Scheduling) xuất hiện ngụ ý trong các luồng nghiệp vụ của module. Ví dụ, ""Yêu cầu điều chỉnh"" trong Cycle Counting ngụ ý có Approval Engine, ""Thông báo cho liên quan"" trong xử lý hàng lỗi ngụ ý Notification Engine. Tuy nhiên, sự liên kết này chưa thực sự rõ ràng và được tham chiếu trực tiếp.
+    *   **DB Schema:** Các schema được cung cấp khá nhất quán về kiểu dữ liệu (UUID cho ID, VARCHAR, INT, TIMESTAMP) và cách liên kết bảng (sử dụng khóa ngoại). Tuy nhiên, có một số điểm chưa rõ:
+        *   Trong `cycle_count_item`, `product_code` là VARCHAR(50) nhưng không có bảng `Product` để tham chiếu.
+        *   Trong `packing_item`, `product_code` cũng tương tự.
+        *   `created_by` trong `defect_report` là VARCHAR(100), cần làm rõ đây là tên người dùng hay ID người dùng và nên có bảng `User` để tham chiếu.
+    *   **Workflow Diagrams:** Việc sử dụng cả Business Flow (Mermaid) và Activity Diagram cho cùng một module có thể gây nhầm lẫn nếu các biểu diễn không hoàn toàn khớp nhau về mặt logic hoặc chi tiết. Cần có hướng dẫn rõ ràng về việc sử dụng loại sơ đồ nào cho mục đích gì.
+    *   **Thuật ngữ:** Thuật ngữ được định nghĩa rõ ràng và sử dụng nhất quán trong tài liệu.
+
+**Nhận xét:** Tính nhất quán khá tốt, logic giữa các phần nhìn chung là hợp lý. Tuy nhiên, cần làm rõ hơn sự liên kết giữa các ""Engine"" đã định nghĩa ở mục 3 và cách chúng được sử dụng trong các luồng nghiệp vụ cụ thể của module. Đồng thời, cần bổ sung các bảng tham chiếu cần thiết (như Product, User) hoặc làm rõ cách xử lý các mã định danh như `product_code` và `created_by`. Việc sử dụng hai loại sơ đồ quy trình trong mỗi module cần được làm rõ để tránh mâu thuẫn hoặc dư thừa.
+
+*   **Điểm:** 7/10
+
+**3. Độ chính xác nghiệp vụ (Accuracy - Trọng số 20%)**
+
+*   **Thuật ngữ BA/IT:** Sử dụng thuật ngữ khá chuẩn xác (SRS, User Story, Cycle Counting, Packing, QC, Handheld Scanner, API Gateway, Spring Boot, React.js, PostgreSQL, OAuth 2.0, TLS 1.3, RBAC). Các thuật ngữ nghiệp vụ như ""kiểm kê luân phiên"", ""đóng gói"", ""hàng lỗi/trả về"" cũng được sử dụng đúng.
+*   **Quy trình thực tế:**
+    *   Các quy trình như Cycle Counting, Packing, xử lý hàng lỗi/trả về là điển hình và quen thuộc trong quản lý kho FMCG.
+    *   Việc sử dụng Handheld Scanner cho nhân viên kho là thực tế.
+    *   Việc phân chia vai trò người dùng (Nhân viên kho, Quản lý kho, Nhân viên QC) là hợp lý.
+    *   Yêu cầu về hiệu năng (dưới 2 giây phản hồi, hỗ trợ 1000 thiết bị) và bảo mật (OAuth 2.0, TLS 1.3, RBAC) là các yêu cầu phi chức năng chuẩn mực và thực tế cho một hệ thống doanh nghiệp.
+    *   Quy trình ""Xử lý hàng lỗi/Hàng trả về"" hơi đơn giản hóa, ví dụ: ""Trả lại nhà cung cấp hoặc hủy"" có thể cần thêm các quy trình chi tiết hơn tùy thuộc vào chính sách của công ty. Tuy nhiên, ở cấp độ SRS thì chấp nhận được.
+
+**Nhận xét:** Độ chính xác nghiệp vụ và kỹ thuật là một điểm mạnh của bản SRS này. Các thuật ngữ được sử dụng đúng, các quy trình và yêu cầu phi chức năng đều phản ánh thực tế trong lĩnh vực quản lý kho FMCG và phát triển phần mềm.
+
+*   **Điểm:** 9/10
+
+**4. Định dạng & Văn phong (Format & Tone - Trọng số 20%)**
+
+*   **Markdown chuẩn:** Sử dụng Markdown chuẩn để định dạng tiêu đề, bảng biểu, danh sách. Điều này giúp tài liệu dễ đọc và cấu trúc.
+*   **Mermaid:** Sử dụng Mermaid để vẽ sơ đồ kiến trúc và các Business Flow. Điều này rất tốt vì cho phép tạo sơ đồ trực tiếp trong mã, dễ dàng chỉnh sửa và tái tạo.
+*   **Bị ""bịa đặt"" thông tin:**
+    *   Hầu hết thông tin đều có vẻ logic và dựa trên nghiệp vụ phổ biến.
+    *   **Tuy nhiên, có một điểm cần lưu ý:** Phần 5.3 ""Độ tin cậy"" có một câu: ""Backup dữ liệu hàng ngày và lưu trữ tại **异地数据中心**"". Cụm ""异地数据中心"" là tiếng Trung Quốc, có nghĩa là ""Trung tâm dữ liệu ở địa điểm khác"". Đây là một lỗi ""bịa đặt"" hoặc sai sót nghiêm trọng về ngôn ngữ và văn hóa. Cần được sửa lại thành ""trung tâm dữ liệu dự phòng"" hoặc ""trung tâm dữ liệu ngoài khu vực"".
+    *   Các Business Rules được đặt tên là ""XXX-BR-01"", ""XXX-BR-02"" v.v. Việc ""XXX"" này có vẻ là placeholder, có thể được thay thế bằng mã định danh của dự án hoặc loại quy tắc để rõ ràng hơn.
+
+**Nhận xét:** Định dạng Markdown và việc sử dụng Mermaid là xuất sắc. Văn phong chuyên nghiệp, trừ một lỗi sai sót ngôn ngữ (cụm tiếng Trung) ở mục 5.3, đây là một lỗi đáng kể cần sửa ngay lập tức. Việc sử dụng placeholder ""XXX"" trong tên Business Rule cũng cần được xem xét.
+
+*   **Điểm:** 7/10 (Trừ điểm vì lỗi sai sót ngôn ngữ nghiêm trọng)
+
+---
+
+### Tổng điểm trọng số:
+
+*   Tính đầy đủ: 8/10 * 30% = 2.4 điểm
+*   Tính nhất quán: 7/10 * 30% = 2.1 điểm
+*   Độ chính xác nghiệp vụ: 9/10 * 20% = 1.8 điểm
+*   Định dạng & Văn phong: 7/10 * 20% = 1.4 điểm
+
+**Tổng điểm:** 2.4 + 2.1 + 1.8 + 1.4 = **7.7 / 10**
+
+---
+
+### Phân loại: **Tốt** (7.7 điểm)
+
+---
+
+### Nhận xét cụ thể những điểm cần cải thiện:
+
+1.  **Nhất quán và Rõ ràng về Quy trình:**
+    *   **Sơ đồ quy trình:** Làm rõ mục đích và sự khác biệt giữa ""Business Flow (Mermaid)"" và ""Activity Diagram"" trong mỗi module. Nếu chúng cùng mô tả một quy trình, hãy chọn một loại hoặc đảm bảo chúng hoàn toàn khớp nhau. Có thể sử dụng ""Business Flow"" để mô tả luồng chính và ""Activity Diagram"" để chi tiết hóa hoạt động của một vai trò hoặc một phần của luồng.
+    *   **Liên kết Engine:** Tham chiếu rõ ràng hơn đến các Engine (Approval, Notification, Automation, Scheduling) đã định nghĩa ở mục 3 trong các luồng nghiệp vụ cụ thể của từng module. Ví dụ: Khi mô tả ""Yêu cầu điều chỉnh"" trong Cycle Counting, có thể ghi chú ""sử dụng Approval Engine"".
+
+2.  **DB Schema:**
+    *   **Bổ sung bảng tham chiếu:** Tạo các bảng `Product` và `User` để có thể tham chiếu đến `product_code` và `created_by`, thay vì chỉ dùng mã định danh dạng chuỗi. Điều này sẽ tăng tính toàn vẹn và nhất quán của dữ liệu.
+    *   **Kiểu dữ liệu:** Xem xét lại kiểu dữ liệu cho `status` trong các bảng. Hiện tại đang dùng `VARCHAR(50)`. Cân nhắc sử dụng Enum hoặc bảng tra cứu riêng để quản lý các trạng thái này một cách chặt chẽ hơn và tránh sai sót khi nhập liệu.
+
+3.  **Định dạng & Văn phong:**
+    *   **Sửa lỗi sai sót ngôn ngữ:** **Tuyệt đối sửa lỗi ""异地数据中心"" ở mục 5.3.** Thay thế bằng ngôn ngữ tiếng Việt chuẩn mực như ""trung tâm dữ liệu dự phòng"" hoặc ""trung tâm dữ liệu ngoài khu vực"".
+    *   **Quy ước đặt tên:** Thay thế placeholder ""XXX"" trong tên Business Rule (ví dụ: `XXX-BR-01`) bằng một mã định danh có ý nghĩa hơn, liên quan đến dự án hoặc loại quy tắc.
+
+4.  **Chi tiết hóa nghiệp vụ (Tùy chọn, tùy mức độ chi tiết mong muốn):**
+    *   **Xử lý hàng lỗi/trả về:** Cân nhắc bổ sung thêm các tùy chọn xử lý chi tiết hơn (ví dụ: phân loại hàng lỗi, quyết định trả hàng cho nhà cung cấp nào, quy trình hủy hàng có cần biên bản không...) nếu các yêu cầu này quan trọng ở giai đoạn SRS.
+
+Tóm lại, đây là một bản SRS có chất lượng tốt, thể hiện sự hiểu biết về nghiệp vụ và kỹ thuật. Việc khắc phục các điểm nêu trên sẽ nâng cao đáng kể tính hoàn chỉnh và độ tin cậy của tài liệu.",Success
+"Xây dựng SRS cho dự án Warehouse Management System (WMS) chuyên dụng cho kho thành phẩm gỗ nội thất. Bối cảnh: Hệ thống này đóng vai trò trung gian, nhận dữ liệu Production Order từ SAP/NetSuite và trả về kết quả Inventory Adjustment qua API. Hãy mô tả chi tiết các yêu cầu chức năng về đồng bộ dữ liệu, quy trình Picking theo Wave (Sóng), và quản lý phương tiện vận chuyển (Dock Management). Yêu cầu viết rõ các ràng buộc kỹ thuật (Technical Constraints) về hiệu năng: thời gian phản hồi khi quét barcode phải < 200ms.Viết SRS cho hệ thống quản lý kho thành phẩm Dược phẩm đạt chuẩn GSP. Ngữ cảnh yêu cầu sự kiểm soát tuyệt đối về nhiệt độ, độ ẩm và hạn sử dụng. Các tính năng bắt buộc: Quản lý trạng thái hàng (Quarantine -> Released -> Blocked), Cảnh báo hàng sắp hết hạn (Expiry Warning), và truy xuất lịch sử di chuyển của từng hộp hàng. Yêu cầu mô tả quy trình 'Manual Entry' khi barcode hỏng phải có mã phê duyệt của Supervisor (Approval Flow). Viết chi tiết phần phân quyền người dùng (RBAC).Giả sử tôi có một kho thành phẩm may mặc đang quản lý bằng giấy tờ, giờ muốn lên phần mềm. Hãy viết SRS cho hệ thống này. Nghiệp vụ cần giải quyết: Nhập kho theo bao/kiện, gán vị trí kệ tự động, khi xuất hàng thì hệ thống chỉ đường đi ngắn nhất cho nhân viên lấy hàng. Yêu cầu thêm: Có chức năng 'Xả kho' (Stock Liquidation) cho hàng lỗi mốt và 'Chuyển kho nội bộ' (Inter-warehouse transfer). Hãy viết một cách chi tiết, thực tế, tập trung vào các màn hình chức năng trên điện thoại di động cầm tay.Viết SRS cho một kho thành phẩm tự động hóa (Smart Warehouse). Hệ thống cần quản lý robot AGV và băng chuyền. Hãy tập trung vào các thuật toán logic: Gợi ý vị trí lưu kho dựa trên tần suất xuất hàng (ABC Analysis), tự động gom đơn hàng tối ưu. Yêu cầu mô tả chi tiết phần Dashboard báo cáo thời gian thực về mật độ hàng hóa (Heatmap) và dự báo tồn kho. Viết tài liệu theo phong cách hiện đại, có phần định nghĩa các thuật ngữ chuyên môn (Glossary).Viết SRS cho phần mềm kho thành phẩm tại Việt Nam, cần tuân thủ các quy định về kế toán và kho bãi. Yêu cầu chi tiết về: Phiếu nhập kho/xuất kho theo mẫu thông tư nhà nước, quản lý giá vốn (Moving Average), và tích hợp chữ ký số khi xác nhận phiếu xuất. Hãy mô tả quy trình kiểm kê cuối năm để quyết toán thuế và cách hệ thống xử lý các biên bản mất mát, hư hỏng hàng hóa theo đúng quy trình tài chính công ty.Viết SRS cho hệ thống quản lý chuỗi kho thành phẩm đa quốc gia. Yêu cầu: Hỗ trợ đa ngôn ngữ, đa tiền tệ, quản lý múi giờ UTC cho Audit Log. Hệ thống phải cho phép điều chuyển hàng giữa kho ở Việt Nam và kho ở Thái Lan. Hãy viết chi tiết các yêu cầu phi chức năng về khả năng mở rộng (Scalability) và tính sẵn sàng cao (High Availability 99.9%). Bao gồm cả phần quản lý đối tác vận chuyển (3PL Integration)Viết một bản SRS cho kho thành phẩm nhưng tập trung 70% nội dung vào 'Exception Handling'. Hãy mô tả các quy trình: Xử lý khi quét mã vạch không có trong hệ thống, xử lý khi khách hàng trả lại hàng (RMA), xử lý khi kho bị mất điện (quy trình Offline/Sync), và xử lý khi phát hiện lệch tồn kho giữa vật lý và hệ thống. Đây là tài liệu phục vụ việc test độ bền của phần mềm nên yêu cầu viết cực kỳ khắt khe về các ràng buộc dữ liệu (Data Validation).Viết SRS cho kho thành phẩm của một nhãn hàng thời trang bán Omni-channel (vừa bán lẻ vừa bán Online). Ngữ cảnh: Tốc độ đóng gói là ưu tiên hàng đầu. Hãy mô tả quy trình: In phiếu ship ngay khi Pick hàng, tích hợp với các đơn vị vận chuyển (GHTK, GHN...), và quản lý hàng hoàn (Return). Yêu cầu chi tiết chức năng 'Kitting' (gom nhiều mã thành phẩm thành một combo/set quà tặng). Viết theo phong cách hướng đối tượng, mô tả kỹ các thực thể (Entities) trong hệ thống.","# **SPECIFICATION REQUIREMENTS DOCUMENT (SRS)**  
+## **Warehouse Management System (WMS) for Finished Goods – Furniture Industry**  
+
+---
+
+### **1. GIỚI THIỆU**
+
+#### **1.1 Mục đích**
+Tài liệu này mô tả chi tiết các yêu cầu chức năng và phi chức năng của Hệ thống Quản lý Kho Thành Phẩm (WMS) dành cho ngành gỗ nội thất, nhằm hỗ trợ quá trình quản lý nhập xuất kho, đồng bộ dữ liệu từ hệ thống ERP (SAP/NetSuite), và đảm bảo hoạt động hiệu quả trong môi trường sản xuất và phân phối.
+
+#### **1.2 Phạm vi**
+| Yếu tố | Mô tả |
+|--------|-------|
+| **Tên hệ thống** | Warehouse Management System (WMS) - Furniture Finished Goods |
+| **Người dùng chính** | Nhân viên kho, quản lý kho, quản trị hệ thống |
+| **Hệ thống liên kết** | SAP / NetSuite (ERP), API Gateway, Mobile Devices |
+| **Đối tượng áp dụng** | Kho thành phẩm gỗ nội thất |
+| **Thời gian triển khai** | 6 tháng |
+
+#### **1.3 Thuật ngữ**
+| Từ viết tắt | Giải thích |
+|-------------|------------|
+| **WMS** | Warehouse Management System |
+| **SAP/NetSuite** | Hệ thống ERP quản lý doanh nghiệp |
+| **API** | Application Programming Interface |
+| **Picking** | Quy trình lấy hàng theo đơn |
+| **Wave Picking** | Phân loại đơn hàng theo sóng để tối ưu hóa |
+| **Barcode** | Mã vạch dùng để nhận diện hàng hóa |
+| **AGV** | Automated Guided Vehicle |
+| **RFID** | Radio Frequency Identification |
+| **Inventory Adjustment** | Điều chỉnh tồn kho |
+| **Dock Management** | Quản lý khu vực đón tiếp hàng hóa |
+
+---
+
+### **2. MÔ TẢ TỔNG QUAN**
+
+#### **2.1 Kiến trúc hệ thống (Mermaid)**
+
+```mermaid
+graph TD
+    A[SAP/NetSuite] -->|Production Order| B[API Gateway]
+    B --> C[WMS Core]
+    C --> D[Database]
+    C --> E[Mobile Device (PDA)]
+    C --> F[AGV/Belt Conveyor]
+    C --> G[Notification Engine]
+    C --> H[Scheduler Engine]
+```
+
+#### **2.2 Nhóm người dùng**
+
+| Vai trò | Mô tả |
+|---------|-------|
+| **Nhân viên kho** | Thực hiện nhập xuất, kiểm kê, picking hàng |
+| **Quản lý kho** | Giám sát hoạt động, xử lý ngoại lệ |
+| **Admin hệ thống** | Cấu hình hệ thống, phân quyền người dùng |
+| **ERP (SAP/NetSuite)** | Cung cấp dữ liệu đầu vào cho WMS |
+
+---
+
+### **3. KHUNG WORKFLOW FRAMEWORK**
+
+#### **3.1 Các Engine**
+
+| Engine | Mô tả |
+|--------|-------|
+| **Approval Engine** | Xử lý phê duyệt các hành động đặc biệt như sửa đổi tồn kho, xả kho |
+| **Notification Engine** | Gửi thông báo qua email/SMS khi có sự kiện quan trọng |
+| **Automation Engine** | Tự động hóa các quy trình như gán vị trí, phân loại đơn hàng |
+| **Scheduling Engine** | Lên lịch cho các hoạt động như kiểm kê, phân bổ AGV |
+
+#### **3.2 Workflow Patterns**
+
+| Pattern | Mô tả |
+|---------|-------|
+| **Sequential** | Các bước thực hiện theo thứ tự |
+| **Parallel** | Nhiều bước có thể thực hiện cùng lúc |
+| **Matrix** | Kết hợp nhiều luồng với điều kiện logic phức tạp |
+
+#### **3.3 Database Schema mẫu cho Framework**
+
+```sql
+CREATE TABLE ApprovalRequests (
+    Id INT PRIMARY KEY,
+    RequestType VARCHAR(50),
+    Status ENUM('Pending', 'Approved', 'Rejected'),
+    ApproverId INT,
+    CreatedAt DATETIME
+);
+
+CREATE TABLE Notifications (
+    Id INT PRIMARY KEY,
+    Type VARCHAR(50),
+    Message TEXT,
+    RecipientId INT,
+    IsRead BOOLEAN DEFAULT FALSE
+);
+```
+
+---
+
+### **4. CÁC MODULE CHỨC NĂNG**
+
+#### **4.1 Module: Đồng bộ dữ liệu từ ERP**
+
+##### **Business Flow (Mermaid)**
+
+```mermaid
+graph LR
+    A[ERP] --> B[API Gateway]
+    B --> C[WMS Core]
+    C --> D[Inventory Table]
+    C --> E[Production Order Table]
+```
+
+##### **Activity Diagram**
+
+```mermaid
+graph TD
+    A[Receive PO from ERP] --> B{Validate Data}
+    B -- Yes --> C[Update Inventory]
+    B -- No --> D[Log Error]
+```
+
+##### **DB Schema**
+
+```sql
+CREATE TABLE ProductionOrders (
+    OrderId VARCHAR(50) PRIMARY KEY,
+    ProductCode VARCHAR(50),
+    Quantity INT,
+    Status ENUM('Received', 'Processed'),
+    CreatedAt DATETIME
+);
+
+CREATE TABLE Inventory (
+    ItemId VARCHAR(50) PRIMARY KEY,
+    Location VARCHAR(50),
+    Quantity INT,
+    LastUpdated DATETIME
+);
+```
+
+##### **Business Rules**
+
+- **XXX-BR-01**: Chỉ chấp nhận đơn hàng từ hệ thống ERP đã xác thực.
+- **XXX-BR-02**: Không cho phép cập nhật tồn kho nếu đơn hàng chưa được xác nhận.
+
+---
+
+#### **4.2 Module: Picking theo Wave**
+
+##### **Business Flow (Mermaid)**
+
+```mermaid
+graph LR
+    A[Order Received] --> B[Group into Waves]
+    B --> C[Assign Picking Route]
+    C --> D[Picking Task Assigned]
+    D --> E[Scan Barcode]
+    E --> F[Update Inventory]
+```
+
+##### **Activity Diagram**
+
+```mermaid
+graph TD
+    A[Receive Orders] --> B[Create Wave]
+    B --> C[Assign to Picker]
+    C --> D[Scan Items]
+    D --> E[Update Stock]
+```
+
+##### **DB Schema**
+
+```sql
+CREATE TABLE Waves (
+    WaveId INT PRIMARY KEY,
+    Status ENUM('Open', 'In Progress', 'Completed')
+);
+
+CREATE TABLE PickingTasks (
+    TaskId INT PRIMARY KEY,
+    WaveId INT,
+    ItemId VARCHAR(50),
+    Quantity INT,
+    Status ENUM('Pending', 'In Progress', 'Completed')
+);
+```
+
+##### **Business Rules**
+
+- **XXX-BR-03**: Mỗi wave chứa tối đa 50 đơn hàng.
+- **XXX-BR-04**: Người dùng phải scan mã vạch trước khi cập nhật tồn kho.
+
+---
+
+#### **4.3 Module: Quản lý phương tiện vận chuyển (Dock Management)**
+
+##### **Business Flow (Mermaid)**
+
+```mermaid
+graph LR
+    A[Incoming Shipment] --> B[Assign Dock]
+    B --> C[Check In]
+    C --> D[Load Goods]
+    D --> E[Outbound Shipment]
+```
+
+##### **Activity Diagram**
+
+```mermaid
+graph TD
+    A[Shipment Request] --> B[Assign Dock]
+    B --> C[Verify Truck Info]
+    C --> D[Load Goods]
+    D --> E[Generate Shipment Report]
+```
+
+##### **DB Schema**
+
+```sql
+CREATE TABLE Docks (
+    DockId INT PRIMARY KEY,
+    Status ENUM('Available', 'Occupied'),
+    Location VARCHAR(50)
+);
+
+CREATE TABLE Shipments (
+    ShipmentId VARCHAR(50) PRIMARY KEY,
+    DockId INT,
+    Status ENUM('Scheduled', 'In Progress', 'Completed'),
+    ExpectedTime DATETIME
+);
+```
+
+##### **Business Rules**
+
+- **XXX-BR-05**: Mỗi dock chỉ xử lý 1 shipment cùng lúc.
+- **XXX-BR-06**: Thời gian phản hồi khi quét barcode phải < 200ms.
+
+---
+
+### **5. YÊU CẦU PHI CHỨC NĂNG**
+
+#### **5.1 Hiệu năng**
+- Thời gian phản hồi khi quét barcode < 200ms.
+- Tối đa 1000 giao dịch mỗi phút.
+
+#### **5.2 Bảo mật**
+- Xác thực người dùng bằng OAuth2.
+- Mã hóa dữ liệu truyền tải bằng TLS 1.3.
+- Chữ ký số cho các phiếu xuất kho.
+
+#### **5.3 Độ tin cậy**
+- Hệ thống phải chịu lỗi nhẹ (failover).
+- Backup dữ liệu hàng ngày.
+- Tự động phục hồi sau sự cố.
+
+---
+
+### **6. PHÂN QUYỀN NGƯỜI DÙNG (RBAC)**
+
+| Vai trò | Quyền |
+|---------|-------|
+| **Nhân viên kho** | Nhập xuất, kiểm kê, scan barcode |
+| **Quản lý kho** | Phê duyệt, xem báo cáo |
+| **Admin hệ thống** | Cấu hình, phân quyền, quản lý dữ liệu |
+| **Supervisor** | Phê duyệt các thao tác đặc biệt |
+
+---
+
+### **7. KẾT LUẬN**
+
+Tài liệu này cung cấp nền tảng kỹ thuật và nghiệp vụ đầy đủ để phát triển hệ thống WMS cho ngành gỗ nội thất, đảm bảo khả năng tích hợp với hệ thống ERP, đồng thời đáp ứng các tiêu chuẩn về hiệu năng, bảo mật và quản lý rủi ro.
+
+--- 
+
+> **Glossary**  
+- **WMS**: Warehouse Management System  
+- **ERP**: Enterprise Resource Planning  
+- **Picking**: Quy trình lấy hàng theo đơn  
+- **Wave Picking**: Phân loại đơn hàng theo sóng  
+- **Barcode**: Mã vạch dùng để nhận diện hàng hóa  
+- **RFID**: Radio Frequency Identification  
+- **API**: Application Programming Interface  
+- **RBAC**: Role-Based Access Control  
+- **GSP**: Good Storage Practice  
+- **ABM**: ABC Analysis  
+- **AGV**: Automated Guided Vehicle  
+- **3PL**: Third Party Logistics  
+
+--- 
+
+> **Note**: Tài liệu này được xây dựng theo tiêu chuẩn IEEE 830 và chuẩn ISO/IEC 25010.","Tuyệt vời! Tôi đã sẵn sàng đảm nhận vai trò ""Giám khảo AI"" và đánh giá bản SRS này một cách nghiêm ngặt.
+
+---
+
+## ĐÁNH GIÁ BẢN SRS: WAREHOUSE MANAGEMENT SYSTEM (WMS) FOR FINISHED GOODS – FURNITURE INDUSTRY
+
+### **Điểm chi tiết theo tiêu chí:**
+
+**1. Tính đầy đủ (Completeness - Trọng số 30%): 9/10**
+
+*   **Giới thiệu:** Đầy đủ mục đích, phạm vi và thuật ngữ. Mục ""Phạm vi"" có bảng tóm tắt rất tốt.
+*   **Workflow:** Được trình bày dưới dạng ""Khung Workflow Framework"" với các Engine và Pattern. Đây là cách tiếp cận trừu tượng, có thể hơi khác với việc mô tả workflow nghiệp vụ chi tiết cho từng chức năng, nhưng vẫn chấp nhận được. Tuy nhiên, việc chỉ có schema mẫu cho framework mà không có workflow nghiệp vụ cụ thể cho các hoạt động chính (nhập, xuất, kiểm kê) làm giảm nhẹ tính đầy đủ của phần này nếu hiểu theo nghĩa ""luồng công việc nghiệp vụ"".
+*   **Module:** Có 3 module chính được mô tả chi tiết (Đồng bộ dữ liệu, Picking theo Wave, Dock Management). Mỗi module có Business Flow, Activity Diagram, DB Schema và Business Rules. Đây là điểm cộng lớn.
+*   **DB Schema:** Được cung cấp ở nhiều cấp độ: cho framework và cho từng module. Khá đầy đủ.
+*   **Phi chức năng:** Các yêu cầu về Hiệu năng, Bảo mật, Độ tin cậy được nêu rõ.
+
+*Nhận xét chi tiết:* Phần Workflow có thể chi tiết hơn về các luồng nghiệp vụ cốt lõi (ví dụ: luồng nhập hàng chi tiết, luồng xuất hàng chi tiết). Tuy nhiên, việc có các ""Engine"" trừu tượng cũng giúp định hướng kiến trúc.
+
+**2. Tính nhất quán (Consistency - Trọng số 30%): 8.5/10**
+
+*   **Logic tổng thể:** Các phần có sự liên kết tốt.
+    *   Kiến trúc hệ thống (2.1) cho thấy sự kết nối giữa SAP/NetSuite, API Gateway và WMS Core, tương thích với Module 4.1 (Đồng bộ dữ liệu).
+    *   Các vai trò người dùng được liệt kê ở 2.2 và 6 (Phân quyền) khớp nhau.
+    *   DB Schema mẫu cho framework (3.3) và DB Schema cho từng module (4.x) không có mâu thuẫn rõ ràng ở mức độ này.
+    *   Các yêu cầu phi chức năng (5.1) về hiệu năng (< 200ms) được nhắc lại trong Business Rules của module Dock Management (XXX-BR-06), cho thấy sự nhất quán.
+*   **Workflow và DB Schema:** Quy trình được mô tả trong các Business Flow và Activity Diagram của các module có sự tương ứng với các bảng DB Schema được định nghĩa cho module đó. Ví dụ, Picking theo Wave (4.2) có bảng `Waves` và `PickingTasks`, phù hợp với quy trình.
+
+*Nhận xét chi tiết:* Nhìn chung là nhất quán. Có thể có những điểm nhỏ có thể làm rõ hơn nữa, ví dụ: nếu ""Approval Engine"" (3.1) được sử dụng trong các nghiệp vụ cụ thể của module, nên có mối liên hệ rõ ràng hơn.
+
+**3. Độ chính xác nghiệp vụ (Accuracy - Trọng số 20%): 9/10**
+
+*   **Thuật ngữ:** Sử dụng thuật ngữ BA/IT chuẩn và phù hợp với lĩnh vực quản lý kho (WMS, ERP, Picking, Wave Picking, Barcode, AGV, RFID, Dock Management, Inventory Adjustment, RBAC, etc.). Định nghĩa rõ ràng trong mục 1.3 và Glossary.
+*   **Quy trình thực tế:** Các quy trình được mô tả (Đồng bộ dữ liệu, Picking theo Wave, Dock Management) là các hoạt động cốt lõi và hợp lý trong một hệ thống WMS cho ngành nội thất. Việc phân loại đơn hàng theo ""Wave Picking"" là một kỹ thuật phổ biến và hiệu quả.
+*   **Business Rules:** Các quy tắc kinh doanh được định nghĩa (XXX-BR-01 đến XXX-BR-06) rõ ràng, có thể kiểm chứng và phù hợp với các quy trình.
+
+*Nhận xét chi tiết:* Các quy tắc kinh doanh (Business Rules) được đặt tên theo định dạng ""XXX-BR-XX"", tuy nhiên, ""XXX"" chưa được định nghĩa là viết tắt của tên hệ thống hoặc dự án. Nên có một quy ước đặt tên rõ ràng hơn cho các quy tắc.
+
+**4. Định dạng & Văn phong (Format & Tone - Trọng số 20%): 9.5/10**
+
+*   **Markdown chuẩn:** Sử dụng định dạng Markdown rất tốt (tiêu đề, danh sách, bảng, code block).
+*   **Mermaid:** Tích hợp Mermaid cho biểu đồ kiến trúc, Business Flow và Activity Diagram là một điểm cộng lớn, giúp trực quan hóa thông tin hiệu quả.
+*   **Văn phong:** Chuyên nghiệp, rõ ràng, súc tích. Tránh được việc ""bịa đặt"" thông tin.
+*   **Cấu trúc:** Cấu trúc tài liệu logic, dễ theo dõi. Có các mục rõ ràng như Giới thiệu, Mô tả tổng quan, Workflow Framework, Các Module, Yêu cầu Phi chức năng, Phân quyền.
+
+*Nhận xét chi tiết:* Bản SRS này được trình bày rất chuyên nghiệp và có tổ chức. Việc sử dụng công cụ trực quan hóa như Mermaid làm tăng đáng kể chất lượng.
+
+---
+
+### **Tổng kết điểm trọng số:**
+
+*   Tính đầy đủ: 9/10 * 0.30 = 2.7 điểm
+*   Tính nhất quán: 8.5/10 * 0.30 = 2.55 điểm
+*   Độ chính xác nghiệp vụ: 9/10 * 0.20 = 1.8 điểm
+*   Định dạng & Văn phong: 9.5/10 * 0.20 = 1.9 điểm
+
+**TỔNG ĐIỂM TRỌNG SỐ: 2.7 + 2.55 + 1.8 + 1.9 = 9.05 / 10**
+
+---
+
+### **Phân loại:** **Xuất sắc (9-10)**
+
+---
+
+### **Nhận xét và Đề xuất Cải thiện:**
+
+Bản SRS này là một tài liệu chất lượng cao, được xây dựng rất tốt với sự đầu tư vào cả nội dung và hình thức. Các tiêu chí về Định dạng, Văn phong và Độ chính xác nghiệp vụ đều đạt điểm rất cao nhờ việc sử dụng thuật ngữ chuẩn, quy trình hợp lý và công cụ trực quan hóa hiện đại.
+
+**Những điểm cần cải thiện để đạt điểm tuyệt đối:**
+
+1.  **Chi tiết hóa Workflow Nghiệp vụ Cốt lõi:**
+    *   **Vấn đề:** Phần ""Khung Workflow Framework"" (Mục 3) mô tả các ""Engine"" và ""Pattern"" ở mức độ trừu tượng cao. Mặc dù hữu ích cho kiến trúc, nhưng nó không thay thế được việc mô tả chi tiết các luồng nghiệp vụ chính như: Luồng nhập hàng từ ERP, Luồng xử lý đơn hàng (từ khi nhận đến khi giao), Luồng kiểm kê (định kỳ, đột xuất), Luồng điều chỉnh tồn kho.
+    *   **Đề xuất:** Bổ sung các mô tả workflow nghiệp vụ chi tiết hơn cho các hoạt động cốt lõi, có thể sử dụng Activity Diagram hoặc BPMN cho từng nghiệp vụ cụ thể, song song với việc đề cập đến các Engine liên quan.
+
+2.  **Quy ước đặt tên cho Business Rules:**
+    *   **Vấn đề:** Các Business Rules được đặt tên theo định dạng `XXX-BR-XX`. ""XXX"" chưa được làm rõ là gì.
+    *   **Đề xuất:** Định nghĩa rõ ràng `XXX` là viết tắt của tên dự án/hệ thống hoặc một mã định danh chung cho các quy tắc kinh doanh, ví dụ: `WMS-BR-01` thay vì `XXX-BR-01`.
+
+3.  **Mối liên hệ rõ ràng hơn giữa Engine và các Module/Quy trình:**
+    *   **Vấn đề:** Có các ""Engine"" được mô tả ở Mục 3, nhưng không phải lúc nào cũng rõ ràng nó được áp dụng vào những quy trình cụ thể nào trong các Module (Mục 4). Ví dụ, ""Approval Engine"" có thể liên quan đến việc phê duyệt điều chỉnh tồn kho hoặc các phiếu xuất đặc biệt.
+    *   **Đề xuất:** Khi mô tả các quy trình trong Module (Mục 4), nếu có sự tham gia của các Engine từ Mục 3, hãy chỉ rõ Engine nào được sử dụng và vai trò của nó trong quy trình đó.
+
+Nhìn chung, đây là một bản SRS rất mạnh mẽ và là nền tảng tuyệt vời cho việc phát triển hệ thống WMS. Các đề xuất trên chỉ nhằm mục đích tinh chỉnh để đạt đến mức độ hoàn hảo.",Success
