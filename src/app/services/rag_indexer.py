@@ -6,7 +6,7 @@ from typing import List, Dict, Any
 from dotenv import load_dotenv
 
 # Import Data Models
-from src.app.models import ChunkMetadata
+from app.models import ChunkMetadata
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 
 load_dotenv()

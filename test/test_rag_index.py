@@ -1,10 +1,10 @@
-from src.app.services.rag_indexer import RAGIndexer
+from app.services.rag_indexer import RAGIndexer
 import os
 
 def test_rag_indexing():
     # 1. Setup paths
-    docs_folder = "../data/AI Knowledge Base WMS"  # Folder chứa SRS mẫu
-    db_path = "../rag_db_test"
+    docs_folder = "./data/AI Knowledge Base WMS"  # Folder chứa SRS mẫu
+    db_path = "./rag_db_test"
     
     # 2. Initialize Indexer
     print("--- Initializing RAG Indexer ---")

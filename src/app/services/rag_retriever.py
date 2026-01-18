@@ -3,7 +3,7 @@ from chromadb.utils import embedding_functions
 from sentence_transformers import CrossEncoder
 from typing import List, Dict, Any
 import torch
-from src.app.utils.logger import logger
+from app.utils.logger import logger
 
 class RAGRetriever:
     """

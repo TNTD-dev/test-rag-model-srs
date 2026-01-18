@@ -1,8 +1,8 @@
 import os
 from openai import OpenAI
 from dotenv import load_dotenv
-from src.app.services.rag_retriever import RAGRetriever
-from src.app.utils.logger import logger
+from app.services.rag_retriever import RAGRetriever
+from app.utils.logger import logger
 
 load_dotenv()
 

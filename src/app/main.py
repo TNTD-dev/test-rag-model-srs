@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
-from src.app.models import SRSRequest, SRSResponse, EvaluationRequest, EvaluationResponse
-from src.app.services.srs_generator import SRSGenerator
-from src.app.services.evaluator import Evaluator
+from app.models import SRSRequest, SRSResponse, EvaluationRequest, EvaluationResponse
+from app.services.srs_generator import SRSGenerator
+from app.services.evaluator import Evaluator
 
 app = FastAPI(
     title="SRS Generation API",
