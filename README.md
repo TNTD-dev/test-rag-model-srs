@@ -38,7 +38,13 @@ An intelligent system for generating Software Requirements Specification (SRS) d
 
 ## 🏃 Usage
 
-### 1. Start the System
+### 1. Index Knowledge Base
+Run the indexing script to parse documents in `data/` and save embeddings to `rag_db`:
+```bash
+uv run python test/test_rag_index.py
+```
+
+### 2. Start the System
 Open 2 terminals:
 
 **Terminal 1: Backend API**
@@ -53,7 +59,7 @@ uv run streamlit run streamlit_app.py
 ```
 *Access UI at: http://localhost:8501*
 
-### 2. Run Benchmarks
+### 3. Run Benchmarks
 
 **Retrieval Benchmark (Hit Rate/MRR)**:
 ```bash
